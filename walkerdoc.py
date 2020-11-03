@@ -420,12 +420,12 @@ class BipedalWalker(gym.Env, EzPickle):
             self.joints[3].speed / SPEED_KNEE,
             1.0 if self.legs[3].ground_contact else 0.0
             ]
-        state += [l.fraction for l in self.lidar]
-        assert len(state)==24
+        #state += [l.fraction for l in self.lidar]
+        #assert len(state)==24
 
         self.scroll = pos.x - VIEWPORT_W/SCALE/5
 
-        shaping  = 130*pos[0]/SCALE   # moving forward is a way to receive reward (normalized to get 300 on completion)
+        shaping  = 100*pos[0]/SCALE   # moving forward is a way to receive reward (normalized to get 300 on completion)
         shaping -= 5.0*abs(state[0])  # keep head straight, other than that and falling, any behavior is unpunished
 
         reward = 0
@@ -434,16 +434,19 @@ class BipedalWalker(gym.Env, EzPickle):
         self.prev_shaping = shaping
 
         for a in action:
-            reward -= 0.00035 * MOTORS_TORQUE * np.clip(np.abs(a), 0, 1)
+            reward -= 0.00001 * MOTORS_TORQUE * np.clip(np.abs(a), 0, 1)
             # normalized to about -50.0 using heuristic, more optimal agent should spend less
 
         done = False
-        if self.game_over or pos[0] < 0:
+        if pos[0] < 0:
             reward = -100
+            done = True
+        elif self.game_over:
+            reward = -100 + 20*pos[0]/SCALE
             done   = True
         if pos[0] > (TERRAIN_LENGTH-TERRAIN_GRASS)*TERRAIN_STEP:
             done   = True
-        return np.array(state), reward, done, {}
+        return np.array(state)[0:14], reward, done, {}
 
     def render(self, mode='human'):
         from gym.envs.classic_control import rendering
